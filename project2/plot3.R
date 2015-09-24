@@ -1,5 +1,5 @@
 ## CDSS Exploratory Data Analysis
-## Project 2 - Plot 1
+## Project 2 - Plot 3
 
 ## Written by: Michael Gregory
 ## Date: 23-Sep-2015
@@ -9,10 +9,16 @@
 ## source over the course of the entire year. The data that you will use for this assignment are for 1999, 2002, 2005, and 2008.
 ##  and https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip
 
-##Have total emissions from PM2.5 decreased in the United States from 1999 to 2008? Using the base plotting system, make a 
-##plot showing the total PM2.5 emission from all sources for each of the years 1999, 2002, 2005, and 2008.
+##Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, which of these four sources 
+##have seen decreases in emissions from 1999–2008 for Baltimore City? Which have seen increases in emissions from 1999–2008? Use the 
+##ggplot2 plotting system to make a plot answer this question.
 
-outputFile <- "plot1.png"
+library(ggplot2)
+
+
+outputFile <- "plot3.png"
+desiredFIPS <- "24510"
+
 fileURL <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip"
 trueFileMD5 <- "b5f11f80e171a7148029b7f367b3667d"
 
@@ -54,22 +60,65 @@ if(!file.exists(sccFile)) {
         SCC <- readRDS(sccFile)
 }
 
+##Set the column classes correctly
+NEI$fips <- as.factor(NEI$fips)
+NEI$SCC <- as.factor(NEI$SCC)
+NEI$Pollutant <- as.factor(NEI$Pollutant)
+NEI$type <- as.factor(NEI$type)
+NEI$year <- as.factor(NEI$year)
+
 if(anyNA(NEI)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))
 if(anyNA(SCC)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))
 
-##Calculate cross-tabulation of emissions by year.
-totalEmissions <- xtabs(Emissions ~ year, data = NEI)
 
 ##Open png file 
 cat(sprintf("Opening output file: \n\t%s\n", outputFile))
-png(filename = outputFile, bg = "transparent")
+png(filename = outputFile, bg = "transparent", height = 960)
 
-##Plot totalEmissions and create the image
-barplot(totalEmissions,  main = "Total Emissions by Year",
-        col="red",
-        ylab="Total Emissions (Tons)",
-        xlab="Year")
+g <- ggplot(subset(NEI, fips==desiredFIPS), aes(year,Emissions)) + 
+        facet_grid(type ~.) + 
+        geom_bar(stat = 'identity') + 
+        ggtitle(as.character(sprintf("Total Emissions by Year for FIPS %s for each collector type.", desiredFIPS))) +
+        xlab("Year") + 
+        ylab("Total Emissions(Tons)")
+print(g)
 
 ##Save/close the image
 dev.off()
 
+
+
+
+
+
+##Alternative using qplot
+##qplot(year, Emissions, data=NEI[NEI$fips==desiredFIPS,], 
+##      facets = type~., 
+##      geom = "bar", 
+##      stat = 'identity', 
+##      main = as.character(sprintf("Total Emissions by Year for FIPS %s for each collector type.", desiredFIPS)), 
+##      xlab = "Year", 
+##      ylab = "Total Emissions(Tons)")
+
+
+##Alternative approach using base plotting system
+##Capture the existing monitor types for the desiredFIPS code
+##desiredTypes <- unique(subset(NEI, fips==desiredFIPS)$type)
+##graphrows <- graphcols <- ceiling(sqrt(length(desiredTypes)))
+##par(mfrow=c(graphrows,graphcols))
+##total <- 0
+##Create xtabs and then the images
+##for(i in desiredTypes) {
+##        Calculate cross-tabulation of emissions by year with the desired FIPS code location subset of NEI
+##        totalEmissions <- xtabs(Emissions ~ year, data = NEI, subset = NEI$fips==desiredFIPS & NEI$type==i)
+
+##        total <- total + sum(as.matrix(totalEmissions))
+##        print(total)
+##        mainTitle <- as.character(sprintf("Total Emissions by Year for FIPS %s \n captured with %s type monitor.", desiredFIPS, i))
+
+##        barplot(totalEmissions,  
+##                main = mainTitle,
+##                col="red",
+##                ylab="Total Emissions (Tons)",
+##                xlab="Year")
+##}
