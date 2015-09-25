@@ -2,7 +2,7 @@
 ## Project 2 - Plot 4
 
 ## Written by: Michael Gregory
-## Date: 23-Sep-2015
+## Date: 25-Sep-2015
 
 ## Original data description at http://www3.epa.gov/ttn/chief/eiinformation.html
 ##For each year and for each type of PM source, the NEI records how many tons of PM2.5 were emitted from that 
@@ -75,15 +75,15 @@ searchSCCs <- SCC[grepl("Fuel Comb.*Coal", SCC$EI.Sector, ignore.case = TRUE),]$
 
 ##Open png file 
 cat(sprintf("Opening output file: \n\t%s\n", outputFile))
-png(filename = outputFile, bg = "transparent", width = 925, height = 785)
+png(filename = outputFile, bg = "transparent")
 
 ##Subset NEI by the search SCCs then plot
 print(ggplot(subset(NEI, NEI$SCC %in% searchSCCs), aes(year,Emissions)) + 
         geom_bar(stat = 'identity') + 
-        ggtitle("Total Emissions for Coal Combusition-Related Sources (1999 to 2008)") +
+        ggtitle("Total Emissions for Coal Combusition-Related Sources \n(1999 to 2008)") +
         xlab("Year") + 
-        ylab("Total Emissions (Tons)")) +
-        theme(plot.margin=unit(c(1,1,10,1), "cm"))
+        ylab("Total Emissions (Tons)") +
+        theme(plot.margin=unit(c(1,1,1,1), "cm")))
 
 
 ##Save/close the image

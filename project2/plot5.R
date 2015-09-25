@@ -1,22 +1,20 @@
 ## CDSS Exploratory Data Analysis
-## Project 2 - Plot 3
+## Project 2 - Plot 5
 
 ## Written by: Michael Gregory
-## Date: 25-Sep-2015
+## Date: 26-Sep-2015
 
 ## Original data description at http://www3.epa.gov/ttn/chief/eiinformation.html
 ##For each year and for each type of PM source, the NEI records how many tons of PM2.5 were emitted from that 
 ## source over the course of the entire year. The data that you will use for this assignment are for 1999, 2002, 2005, and 2008.
 ##  and https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip
 
-##Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, which of these four sources 
-##have seen decreases in emissions from 1999–2008 for Baltimore City? Which have seen increases in emissions from 1999–2008? Use the 
-##ggplot2 plotting system to make a plot answer this question.
+##How have emissions from motor vehicle sources changed from 1999–2008 in Baltimore City?
 
 library(ggplot2)
+library(grid)
 
-
-outputFile <- "plot3.png"
+outputFile <- "plot5.png"
 desiredFIPS <- "24510"
 
 fileURL <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip"
@@ -70,55 +68,30 @@ NEI$year <- as.factor(NEI$year)
 if(anyNA(NEI)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))
 if(anyNA(SCC)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))
 
+##How have emissions from motor vehicle sources changed from 1999–2008 in Baltimore City?
+
+## What fields should we search on?  List all fields that have "vehicle".
+## for(i in as.numeric(1:ncol(SCC))) {print(names(SCC)[i]); print(unique(grep("vehicle", SCC[,i], value=TRUE, ignore.case = TRUE)))}
+
+#Caputre a list of all motor vehicle sources.  Could also search EI.Sector for search but that doesn't include ie. motorcycles.
+searchSCCs <- SCC[grepl("vehicle", SCC$SCC.Level.Two, ignore.case = TRUE),]$SCC
 
 ##Open png file 
 cat(sprintf("Opening output file: \n\t%s\n", outputFile))
-png(filename = outputFile, bg = "transparent", height = 960)
+png(filename = outputFile, bg = "transparent")
 
-g <- ggplot(subset(NEI, fips==desiredFIPS), aes(year,Emissions)) + 
-        facet_grid(type ~.) + 
+##Subset NEI by the search SCCs then plot
+g <- ggplot(subset(NEI, NEI$SCC %in% searchSCCs & fips == desiredFIPS), aes(year,Emissions)) + 
         geom_bar(stat = 'identity') + 
-        ggtitle(as.character(sprintf("Total Emissions by Year for FIPS %s for each collector type.", desiredFIPS))) +
+        ggtitle("Total Emissions for Motor Vehicle Sources \n in Baltimore, MD (1999 to 2008)") +
         xlab("Year") + 
-        ylab("Total Emissions(Tons)")
+        ylab("Total Emissions (Tons)") +
+        theme(plot.margin=unit(c(1,1,1,1), "cm"))
 print(g)
+
+##Add another grid based on facets for EI.Sector.  Need to join datasets.
+##print(g + facet_grid(EI.Sector ~.) + 
+##      ggtitle(as.character(sprintf("Total Emissions by Year for FIPS %s for each collector type.", desiredFIPS))))
 
 ##Save/close the image
 dev.off()
-
-
-
-
-
-
-##Alternative using qplot
-##qplot(year, Emissions, data=NEI[NEI$fips==desiredFIPS,], 
-##      facets = type~., 
-##      geom = "bar", 
-##      stat = 'identity', 
-##      main = as.character(sprintf("Total Emissions by Year for FIPS %s for each collector type.", desiredFIPS)), 
-##      xlab = "Year", 
-##      ylab = "Total Emissions(Tons)")
-
-
-##Alternative approach using base plotting system
-##Capture the existing monitor types for the desiredFIPS code
-##desiredTypes <- unique(subset(NEI, fips==desiredFIPS)$type)
-##graphrows <- graphcols <- ceiling(sqrt(length(desiredTypes)))
-##par(mfrow=c(graphrows,graphcols))
-##total <- 0
-##Create xtabs and then the images
-##for(i in desiredTypes) {
-##        Calculate cross-tabulation of emissions by year with the desired FIPS code location subset of NEI
-##        totalEmissions <- xtabs(Emissions ~ year, data = NEI, subset = NEI$fips==desiredFIPS & NEI$type==i)
-
-##        total <- total + sum(as.matrix(totalEmissions))
-##        print(total)
-##        mainTitle <- as.character(sprintf("Total Emissions by Year for FIPS %s \n captured with %s type monitor.", desiredFIPS, i))
-
-##        barplot(totalEmissions,  
-##                main = mainTitle,
-##                col="red",
-##                ylab="Total Emissions (Tons)",
-##                xlab="Year")
-##}
