@@ -100,7 +100,7 @@ for(i in desiredFIPS)
         ##calculate cross tabulation and save it as a matrix
         totalEmissions <- as.matrix(xtabs(Emissions ~ year, data = NEI, subset = NEI$fips==i))
         ##calculate year-over-year percentage changes
-        pChange[[nameTemp]] <- abs((totalEmissions[-1,] - totalEmissions[-nrow(totalEmissions),]) / totalEmissions[-nrow(totalEmissions),])
+        pChange[[nameTemp]] <- (totalEmissions[-1,] - totalEmissions[-nrow(totalEmissions),]) / totalEmissions[-nrow(totalEmissions),]
 }
 
 pChange <- as.data.frame(pChange, optional = TRUE)
@@ -118,7 +118,8 @@ print(ggplot(pChange, aes(Year, Emissions)) +
         ggtitle(paste("Year-over-Year Change in Motor Vehicle Emissions \n (1999 to 2008) in FIPS: ", toString(desiredFIPS), sep = " ")) +
         xlab("Year") + 
         ylab("Percent Change in Total Emissions (%)") +
-        theme(plot.margin=unit(c(1,1,1,1), "cm")))
+        theme(plot.margin=unit(c(1,1,1,1), "cm")) + 
+        geom_text(aes(label = sprintf("%.f%%", Emissions*100))))
         
         
 ##Save/close the image
