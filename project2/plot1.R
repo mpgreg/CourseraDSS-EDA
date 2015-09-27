@@ -20,8 +20,8 @@ trueFileMD5 <- "b5f11f80e171a7148029b7f367b3667d"
 baseDir <- getwd()
 
 zipFile <- paste(baseDir,"/exdata-data-NEI_data.zip", sep="")
-summaryFile <- paste(baseDir, "/summarySCC_PM25.rds", sep="")
-sccFile <- paste(baseDir, "/Source_Classification_Code.rds", sep="")
+summaryFile <- "summarySCC_PM25.rds"
+sccFile <- "Source_Classification_Code.rds"
 dateDownloaded <- NULL
 
 ##If the file doesn't already exist in baseDir download it and check md5
@@ -34,7 +34,7 @@ if(!file.exists(zipFile)) {
 zipFileMD5 <- digest::digest(algo = "md5", file=zipFile)
 if(zipFileMD5 != trueFileMD5) {
         warning("Downloaded file has changed from original source for this script.  
-                        This script may not work as originally intended.")
+                        This script may not work as originally intended.\n")
 }        
 
 ##Unzip the files and load the data frames
@@ -42,17 +42,17 @@ if(!file.exists(summaryFile)) {
         cat(sprintf("Unzipping files %s \n\t ", summaryFile))
         unzip(zipFile, files=summaryFile)
 } else {
-        cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for NEI Summary Data.", summaryFile))
-        NEI <- readRDS(summaryFile)
+        cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for NEI Summary Data.\n", summaryFile))
 }
+NEI <- readRDS(summaryFile)
 
 if(!file.exists(sccFile)) {
         cat(sprintf("Unzipping files %s \n\t ", sccFile))
         unzip(zipFile, files=sccFile)
 } else {
         cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for SCC Data.\n", sccFile))
-        SCC <- readRDS(sccFile)
 }
+SCC <- readRDS(sccFile)
 
 if(anyNA(NEI)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))
 if(anyNA(SCC)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))

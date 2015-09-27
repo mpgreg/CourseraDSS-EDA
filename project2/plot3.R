@@ -26,8 +26,8 @@ trueFileMD5 <- "b5f11f80e171a7148029b7f367b3667d"
 baseDir <- getwd()
 
 zipFile <- paste(baseDir,"/exdata-data-NEI_data.zip", sep="")
-summaryFile <- paste(baseDir, "/summarySCC_PM25.rds", sep="")
-sccFile <- paste(baseDir, "/Source_Classification_Code.rds", sep="")
+summaryFile <- "summarySCC_PM25.rds"
+sccFile <- "Source_Classification_Code.rds"
 dateDownloaded <- NULL
 
 ##If the file doesn't already exist in baseDir download it and check md5
@@ -49,16 +49,16 @@ if(!file.exists(summaryFile)) {
         unzip(zipFile, files=summaryFile)
 } else {
         cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for NEI Summary Data.", summaryFile))
-        NEI <- readRDS(summaryFile)
 }
+NEI <- readRDS(summaryFile)
 
 if(!file.exists(sccFile)) {
         cat(sprintf("Unzipping files %s \n\t ", sccFile))
         unzip(zipFile, files=sccFile)
 } else {
         cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for SCC Data.\n", sccFile))
-        SCC <- readRDS(sccFile)
 }
+SCC <- readRDS(sccFile)
 
 ##Set the column classes correctly
 NEI$fips <- as.factor(NEI$fips)
@@ -85,40 +85,3 @@ print(g)
 
 ##Save/close the image
 dev.off()
-
-
-
-
-
-
-##Alternative using qplot
-##qplot(year, Emissions, data=NEI[NEI$fips==desiredFIPS,], 
-##      facets = type~., 
-##      geom = "bar", 
-##      stat = 'identity', 
-##      main = as.character(sprintf("Total Emissions by Year for FIPS %s for each collector type.", desiredFIPS)), 
-##      xlab = "Year", 
-##      ylab = "Total Emissions(Tons)")
-
-
-##Alternative approach using base plotting system
-##Capture the existing monitor types for the desiredFIPS code
-##desiredTypes <- unique(subset(NEI, fips==desiredFIPS)$type)
-##graphrows <- graphcols <- ceiling(sqrt(length(desiredTypes)))
-##par(mfrow=c(graphrows,graphcols))
-##total <- 0
-##Create xtabs and then the images
-##for(i in desiredTypes) {
-##        Calculate cross-tabulation of emissions by year with the desired FIPS code location subset of NEI
-##        totalEmissions <- xtabs(Emissions ~ year, data = NEI, subset = NEI$fips==desiredFIPS & NEI$type==i)
-
-##        total <- total + sum(as.matrix(totalEmissions))
-##        print(total)
-##        mainTitle <- as.character(sprintf("Total Emissions by Year for FIPS %s \n captured with %s type monitor.", desiredFIPS, i))
-
-##        barplot(totalEmissions,  
-##                main = mainTitle,
-##                col="red",
-##                ylab="Total Emissions (Tons)",
-##                xlab="Year")
-##}

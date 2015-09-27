@@ -22,8 +22,8 @@ trueFileMD5 <- "b5f11f80e171a7148029b7f367b3667d"
 baseDir <- getwd()
 
 zipFile <- paste(baseDir,"/exdata-data-NEI_data.zip", sep="")
-summaryFile <- paste(baseDir, "/summarySCC_PM25.rds", sep="")
-sccFile <- paste(baseDir, "/Source_Classification_Code.rds", sep="")
+summaryFile <- "summarySCC_PM25.rds"
+sccFile <- "Source_Classification_Code.rds"
 dateDownloaded <- NULL
 
 ##If the file doesn't already exist in baseDir download it and check md5
@@ -45,16 +45,16 @@ if(!file.exists(summaryFile)) {
         unzip(zipFile, files=summaryFile)
 } else {
         cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for NEI Summary Data.", summaryFile))
-        NEI <- readRDS(summaryFile)
 }
+NEI <- readRDS(summaryFile)
 
 if(!file.exists(sccFile)) {
         cat(sprintf("Unzipping files %s \n\t ", sccFile))
         unzip(zipFile, files=sccFile)
 } else {
         cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for SCC Data.\n", sccFile))
-        SCC <- readRDS(sccFile)
 }
+SCC <- readRDS(sccFile)
 
 ##Set the column classes correctly
 NEI$fips <- as.factor(NEI$fips)
@@ -74,7 +74,7 @@ cat(sprintf("Opening output file: \n\t%s\n", outputFile))
 png(filename = outputFile, bg = "transparent")
 
 ##Create the image
-barplot(totalEmissions,  main = as.character(sprintf("Total Emissions by Year for FIPS %s.", desiredFIPS)),
+barplot(totalEmissions,  main = as.character(sprintf("Total Emissions by Year for FIPS %s.", toString(desiredFIPS))),
         col="red",
         ylab="Total Emissions (Tons)",
         xlab="Year")

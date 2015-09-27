@@ -1,25 +1,27 @@
 ## CDSS Exploratory Data Analysis
-## Project 2 - Plot 5
+## Project 2 - Plot 6
 
 ## Written by: Michael Gregory
-## Date: 26-Sep-2015
+## Date: 27-Sep-2015
 
 ## Original data description at http://www3.epa.gov/ttn/chief/eiinformation.html
 ##For each year and for each type of PM source, the NEI records how many tons of PM2.5 were emitted from that 
 ## source over the course of the entire year. The data that you will use for this assignment are for 1999, 2002, 2005, and 2008.
 ##  and https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip
 
-##How have emissions from motor vehicle sources changed from 1999–2008 in Baltimore City?
+##Compare emissions from motor vehicle sources in Baltimore City with emissions from motor vehicle 
+##sources in Los Angeles County, California (fips == 06037). Which city has seen greater changes 
+##over time in motor vehicle emissions?
 
 library(ggplot2)
 library(grid)
 library(gridExtra)
-library(plyr)
+library(reshape2)
 
-outputFile <- "plot5.png"
+outputFile <- "plot6.png"
 
 ##Set to "ALL" unless specifice value(s) are desired
-desiredFIPS <- c("24510")
+desiredFIPS <- c("24510","06037")
 
 fileURL <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip"
 trueFileMD5 <- "b5f11f80e171a7148029b7f367b3667d"
@@ -49,24 +51,26 @@ if(zipFileMD5 != trueFileMD5) {
 if(!file.exists(summaryFile)) {
         cat(sprintf("Unzipping files %s \n\t ", summaryFile))
         unzip(zipFile, files=summaryFile)
+        NEI <- readRDS(summaryFile)
 } else {
         cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for NEI Summary Data.", summaryFile))
+        NEI <- readRDS(summaryFile)
 }
-NEI <- readRDS(summaryFile)
 
 if(!file.exists(sccFile)) {
         cat(sprintf("Unzipping files %s \n\t ", sccFile))
         unzip(zipFile, files=sccFile)
+        SCC <- readRDS(sccFile)
 } else {
         cat(sprintf("Unzipped data file already exists. \n\t Using data file: %s \n for SCC Data.\n", sccFile))
+        SCC <- readRDS(sccFile)
 }
-SCC <- readRDS(sccFile)
 
-##creaete smaller dataset if possilbe for joining
-if(!desiredFIPS == "ALL") {
+##creaete smaller dataset if possilbe
+if(length(desiredFIPS) == 2) {
         cat(sprintf("Subsetting NEI data for FIPS: %s.\n", desiredFIPS))
         NEI <- subset(NEI, fips %in% desiredFIPS)
-}
+} else warning("Less than two FIPS codes specified. Nothing to compare.  Exiting!")
 
 ##Set the column classes correctly
 NEI$fips <- as.factor(NEI$fips)
@@ -76,7 +80,7 @@ NEI$type <- as.factor(NEI$type)
 NEI$year <- as.factor(NEI$year)
 
 if(anyNA(NEI)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))
-if(anyNA(SCC)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))
+if(anyNA(SCC)) cat(sprintf("WARNING: NA missing values in SCC Data.\n"))
 
 ## What fields should we search on?  List all fields that have "vehicle".
 ## for(i in as.numeric(1:ncol(SCC))) {print(names(SCC)[i]); print(unique(grep("vehicle", SCC[,i], value=TRUE, ignore.case = TRUE)))}
@@ -87,30 +91,35 @@ searchSCCs <- SCC[grepl("vehicle", SCC$SCC.Level.Two, ignore.case = TRUE),]$SCC
 ##Subset to just the desired rows
 NEI <- subset(NEI, NEI$SCC %in% searchSCCs)
 
-##Join NEI and SCC to be able to plot by EI.Sector
-NEI <- join(NEI, SCC[,c("SCC","EI.Sector")], by="SCC")
+##calculate crosstabs and percentage change for each desiredFIPS
+pChange<-list()
+for(i in desiredFIPS)
+{
+        nameTemp <- i  ##paste("FIPS", i, sep=" ")
+        
+        ##calculate cross tabulation and save it as a matrix
+        totalEmissions <- as.matrix(xtabs(Emissions ~ year, data = NEI, subset = NEI$fips==i))
+        ##calculate year-over-year percentage changes
+        pChange[[nameTemp]] <- abs((totalEmissions[-1,] - totalEmissions[-nrow(totalEmissions),]) / totalEmissions[-nrow(totalEmissions),])
+}
 
-##Shorten the EI.Sector name for better graphing
-NEI$EI.Sector.Short <- unlist(lapply(strsplit(as.character(NEI$EI.Sector), split = "(Mobile -).? "), FUN = function(x){x[2]}))
+pChange <- as.data.frame(pChange, optional = TRUE)
+pChange <- cbind(Year = rownames(pChange), pChange)
+pChange <- melt(pChange, id.vars='Year')
+colnames(pChange) <- c("Year","FIPS", "Emissions")
+
 
 ##Open png file 
 cat(sprintf("Opening output file: \n\t%s\n", outputFile))
 png(filename = outputFile, bg = "transparent", height = 960, width=960)
 
-##Plot all sources on one
-emitBySCC <- ggplot(NEI, aes(year,Emissions)) + 
-        geom_bar(stat = 'identity') + 
-        ggtitle(paste("Total Emissions for Motor Vehicle Sources \n (1999 to 2008) in FIPS: ", desiredFIPS)) +
+print(ggplot(pChange, aes(Year, Emissions)) +   
+        geom_bar(aes(fill = FIPS), position = "dodge", stat="identity") +
+        ggtitle(paste("Year-over-Year Change in Motor Vehicle Emissions \n (1999 to 2008) in FIPS: ", toString(desiredFIPS), sep = " ")) +
         xlab("Year") + 
-        ylab("Total Emissions (Tons)") +
-        theme(plot.margin=unit(c(1,1,1,1), "cm"))
-
-##Create another grid based on facets for EI.Sector.Short
-emitByEISector <- emitBySCC + facet_grid(EI.Sector.Short ~.) + 
-        ggtitle(as.character(sprintf("Total Emissions by Year for FIPS %s \nfor each collector type.", desiredFIPS)))
-
-grid.arrange(emitBySCC, emitByEISector, ncol=2)
-
-
+        ylab("Percent Change in Total Emissions (%)") +
+        theme(plot.margin=unit(c(1,1,1,1), "cm")))
+        
+        
 ##Save/close the image
 dev.off()
