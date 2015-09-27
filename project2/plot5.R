@@ -13,9 +13,12 @@
 
 library(ggplot2)
 library(grid)
+library(plyr)
 
 outputFile <- "plot5.png"
-desiredFIPS <- "24510"
+
+##Set to "ALL" unless specifice value(s) are desired
+desiredFIPS <- c("24510")
 
 fileURL <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip"
 trueFileMD5 <- "b5f11f80e171a7148029b7f367b3667d"
@@ -58,6 +61,12 @@ if(!file.exists(sccFile)) {
         SCC <- readRDS(sccFile)
 }
 
+##creaete smaller dataset if possilbe for joining
+if(!desiredFIPS == "ALL") {
+        cat(sprintf("Subsetting NEI data for FIPS: %s.\n", desiredFIPS))
+        NEI <- subset(NEI, fips %in% desiredFIPS)
+}
+
 ##Set the column classes correctly
 NEI$fips <- as.factor(NEI$fips)
 NEI$SCC <- as.factor(NEI$SCC)
@@ -73,25 +82,36 @@ if(anyNA(SCC)) cat(sprintf("WARNING: NA missing values in summary Data.\n"))
 ## What fields should we search on?  List all fields that have "vehicle".
 ## for(i in as.numeric(1:ncol(SCC))) {print(names(SCC)[i]); print(unique(grep("vehicle", SCC[,i], value=TRUE, ignore.case = TRUE)))}
 
-#Caputre a list of all motor vehicle sources.  Could also search EI.Sector for search but that doesn't include ie. motorcycles.
+##Caputre a list of all motor vehicle sources.  Could also search EI.Sector for search but that doesn't include ie. motorcycles.
 searchSCCs <- SCC[grepl("vehicle", SCC$SCC.Level.Two, ignore.case = TRUE),]$SCC
+
+##Subset to just the desired rows
+NEI <- subset(NEI, NEI$SCC %in% searchSCCs)
+
+##Join NEI and SCC to be able to plot by EI.Sector
+NEI <- join(NEI, SCC[,c("SCC","EI.Sector")], by="SCC")
+
+##Shorten the EI.Sector name for better graphing
+NEI$EI.Sector.Short <- unlist(lapply(strsplit(as.character(NEI$EI.Sector), split = "(Mobile -).? "), FUN = function(x){x[2]}))
 
 ##Open png file 
 cat(sprintf("Opening output file: \n\t%s\n", outputFile))
-png(filename = outputFile, bg = "transparent")
+png(filename = outputFile, bg = "transparent", height = 960, width=960)
 
 ##Subset NEI by the search SCCs then plot
-g <- ggplot(subset(NEI, NEI$SCC %in% searchSCCs & fips == desiredFIPS), aes(year,Emissions)) + 
+emitBySCC <- ggplot(NEI, aes(year,Emissions)) + 
         geom_bar(stat = 'identity') + 
-        ggtitle("Total Emissions for Motor Vehicle Sources \n in Baltimore, MD (1999 to 2008)") +
+        ggtitle(paste("Total Emissions for Motor Vehicle Sources \n (1999 to 2008) in FIPS: ", desiredFIPS)) +
         xlab("Year") + 
         ylab("Total Emissions (Tons)") +
         theme(plot.margin=unit(c(1,1,1,1), "cm"))
-print(g)
 
-##Add another grid based on facets for EI.Sector.  Need to join datasets.
-##print(g + facet_grid(EI.Sector ~.) + 
-##      ggtitle(as.character(sprintf("Total Emissions by Year for FIPS %s for each collector type.", desiredFIPS))))
+##Create another grid based on facets for EI.Sector.Short
+emitByEISector <- emitBySCC + facet_grid(EI.Sector.Short ~.) + 
+        ggtitle(as.character(sprintf("Total Emissions by Year for FIPS %s \nfor each collector type.", desiredFIPS)))
+
+grid.arrange(emitBySCC, emitByEISector, ncol=2)
+
 
 ##Save/close the image
 dev.off()
